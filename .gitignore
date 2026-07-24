@@ -1,0 +1,7 @@
+# Exclude sensitive configuration files containing API credentials
+fusionsolar_config.json
+
+# Local scripts and scratch files
+scratch/
+*.bat
+*.log

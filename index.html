@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานผลผลิตไฟ ระบบโซล่าเซลล์ (KKE Solar Dashboard)</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar / Navigation -->
+        <header class="main-header">
+            <div class="logo-area">
+                <img src="kke_logo.jpg" alt="KKE Logo" class="kke-logo">
+                <div class="header-title-container">
+                    <h1>รายงานผลผลิตไฟ ระบบโซล่าเซลล์</h1>
+                    <span class="subtitle">KKE CO., LTD. | บริษัท เคเคอี จำกัด</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span id="last-updated" class="status-badge">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> กำลังโหลดข้อมูล...
+                </span>
+                <button id="refresh-btn" class="btn btn-primary" title="รีเฟรชข้อมูล">
+                    <i class="fa-solid fa-rotate"></i> <span>รีเฟรช</span>
+                </button>
+                <button id="theme-toggle" class="btn btn-icon" title="เปลี่ยนธีม">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Menu Bar -->
+        <nav class="nav-menu-bar">
+            <button class="nav-menu-item active" data-view="main">
+                <i class="fa-solid fa-house"></i> หน้าหลัก (Main)
+            </button>
+            <button class="nav-menu-item" data-view="alarms">
+                <i class="fa-solid fa-bell"></i> รายงานแจ้งเตือน (Alarms)
+            </button>
+            <button class="nav-menu-item" data-view="production">
+                <i class="fa-solid fa-chart-column"></i> ผลผลิตไฟและเป้าหมาย (Yield & Targets)
+            </button>
+            <button class="nav-menu-item" data-view="database">
+                <i class="fa-solid fa-database"></i> ฐานข้อมูลเป้าหมาย (Database)
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="dashboard-content">
+            <!-- Loading Indicator -->
+            <div id="loader" class="loader-overlay">
+                <div class="spinner"></div>
+                <p>กำลังดึงข้อมูลอินเวอร์เตอร์จาก FusionSolar...</p>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="error-banner" class="error-banner hidden">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div class="error-text">
+                    <h3>โหลดข้อมูลล้มเหลว</h3>
+                    <p id="error-message">เกิดข้อผิดพลาดในการโหลดข้อมูลจากพอร์ทัล FusionSolar</p>
+                </div>
+                <button id="error-retry" class="btn btn-outline btn-sm">ลองใหม่</button>
+            </div>
+
+            <!-- VIEW 1: Main Dashboard -->
+            <div id="view-main" class="page-view">
+                <!-- Category Tabs Section -->
+                <section class="category-tabs-container">
+                    <div class="category-tabs">
+                        <button class="tab-btn active" data-category="all"><i class="fa-solid fa-border-all"></i> แสดงทั้งหมด</button>
+                        <button class="tab-btn" data-category="ppa"><i class="fa-solid fa-file-contract"></i> โครงการ PPA</button>
+                        <button class="tab-btn" data-category="epc"><i class="fa-solid fa-screwdriver-wrench"></i> โครงการ EPC</button>
+                    </div>
+                </section>
+
+                <!-- KPI Cards Section -->
+                <section class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon color-blue">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>ยอดผลิตไฟฟ้ารวม</h3>
+                            <p id="kpi-total-gen" class="kpi-value">-</p>
+                            <span class="kpi-unit">กิโลวัตต์-ชั่วโมง (kWh)</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon color-green">
+                            <i class="fa-solid fa-industry"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>จำนวนไซต์ทั้งหมด</h3>
+                            <p id="kpi-active-sites" class="kpi-value">-</p>
+                            <span class="kpi-unit">สถานที่</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon color-amber">
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>จำนวนอินเวอร์เตอร์</h3>
+                            <p id="kpi-total-inverters" class="kpi-value">-</p>
+                            <span class="kpi-unit">เครื่อง</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon color-purple">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>การผลิตไฟฟ้าสูงสุดต่อวัน</h3>
+                            <p id="kpi-peak-day" class="kpi-value">-</p>
+                            <span id="kpi-peak-day-label" class="kpi-unit">วันที่ -</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon color-blue">
+                            <i class="fa-solid fa-calendar-day"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>% เทียบเป้าหมายรายวัน</h3>
+                            <p id="kpi-daily-target-pct" class="kpi-value">-</p>
+                            <span id="kpi-daily-target-val" class="kpi-unit">เป้าหมาย: - kWh/วัน</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon color-green">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>% เทียบเป้าหมายรายเดือน</h3>
+                            <p id="kpi-monthly-target-pct" class="kpi-value">-</p>
+                            <span id="kpi-monthly-target-val" class="kpi-unit">เป้าหมาย: - kWh/เดือน</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Filters Section -->
+                <section class="filters-card">
+                    <div class="filters-header">
+                        <h2><i class="fa-solid fa-sliders"></i> ตัวกรองและการค้นหา</h2>
+                        <button id="clear-filters" class="btn btn-text btn-sm hidden">ล้างตัวกรอง</button>
+                    </div>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="filter-site">เลือกไซต์</label>
+                            <div class="select-wrapper">
+                                <select id="filter-site">
+                                    <option value="all">ไซต์ทั้งหมด</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="filter-inverter">เลือกอินเวอร์เตอร์</label>
+                            <div class="select-wrapper">
+                                <select id="filter-inverter">
+                                    <option value="all">อินเวอร์เตอร์ทั้งหมด</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="filter-group search-group">
+                            <label for="search-input">ค้นหาไซต์ / อุปกรณ์</label>
+                            <div class="search-wrapper">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="search-input" placeholder="พิมพ์เพื่อค้นหา...">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Table Section -->
+                <section class="table-card">
+                    <div class="table-header-wrapper">
+                        <div class="table-title">
+                            <h2>ตารางสรุปประสิทธิภาพอินเวอร์เตอร์รายวัน</h2>
+                            <span id="table-count-badge" class="count-badge">0 รายการ</span>
+                        </div>
+                        <div class="table-actions">
+                            <div class="toggle-container">
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-heatmap" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="toggle-label">แสดงแผนที่ความร้อน (Heatmap)</span>
+                            </div>
+                            <button id="export-csv-btn" class="btn btn-outline btn-sm">
+                                <i class="fa-solid fa-download"></i> ส่งออกไฟล์ CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive-container">
+                        <table id="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="site">ไซต์ <i class="fa-solid fa-sort"></i></th>
+                                    <th class="sortable text-center" data-sort="device">จำนวนเครื่อง <i class="fa-solid fa-sort"></i></th>
+                                    <th class="sortable text-right" data-sort="capacity">กำลังผลิต (kW) <i class="fa-solid fa-sort"></i></th>
+                                    <th class="sortable text-right" data-sort="total">รวม (kWh) <i class="fa-solid fa-sort"></i></th>
+                                    <th class="sortable text-right" data-sort="target">เป้าหมาย (kWh/วัน) <i class="fa-solid fa-sort"></i></th>
+                                    <th class="sortable text-right" data-sort="achievement">% เทียบเป้า <i class="fa-solid fa-sort"></i></th>
+                                    <!-- Days 1 to 31 will be generated dynamically -->
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Table Pagination -->
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            แสดงลำดับที่ <span id="page-start">0</span> ถึง <span id="page-end">0</span> จากทั้งหมด <span id="total-rows">0</span> รายการ
+                        </div>
+                        <div class="pagination-controls">
+                            <button id="prev-page" class="btn btn-icon btn-sm" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                            <span id="page-number-display">หน้า 1 จาก 1</span>
+                            <button id="next-page" class="btn btn-icon btn-sm" disabled><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VIEW 2: Alarm Page -->
+            <div id="view-alarms" class="page-view hidden">
+                <!-- Alarm & Abnormalities Section -->
+                <section class="alarm-card">
+                    <div class="alarm-header">
+                        <h2><i class="fa-solid fa-bell"></i> รายการแจ้งเตือนและความผิดปกติ (Alarms & Abnormalities)</h2>
+                        <span id="alarm-count-badge" class="count-badge status-normal">ปกติ</span>
+                    </div>
+                    <div id="alarm-container" class="alarm-container">
+                        <div class="alarm-loading">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> กำลังโหลดข้อมูลการแจ้งเตือน...
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VIEW 3: Production Yield & Target Page -->
+            <div id="view-production" class="page-view hidden">
+                <!-- Visualizations / Charts -->
+                <section class="charts-grid">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h2>แนวโน้มการผลิตไฟฟ้าเป็นรายวัน</h2>
+                            <span class="info-tooltip" title="ปริมาณพลังงานไฟฟ้ารวมที่ผลิตได้จากอินเวอร์เตอร์ทั้งหมดที่เลือกในแต่ละวัน"><i class="fa-solid fa-circle-info"></i></span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="daily-trend-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h2>การผลิตไฟฟ้าแบ่งตามไซต์</h2>
+                            <span class="info-tooltip" title="เปรียบเทียบปริมาณพลังงานไฟฟ้ารวมที่ผลิตได้ในแต่ละไซต์"><i class="fa-solid fa-circle-info"></i></span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="site-distribution-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card full-width">
+                        <div class="card-header">
+                            <h2>เปรียบเทียบผลผลิตจริงกับเป้าหมาย (Daily & Monthly Target Comparison)</h2>
+                            <div class="card-actions">
+                                <select id="chart-site-select" class="chart-select">
+                                    <option value="all">ทุกโครงการ (All Projects)</option>
+                                </select>
+                                <div class="btn-group">
+                                    <button id="btn-chart-hourly" class="btn btn-outline" onclick="setTargetChartPeriod('hourly')">รายชั่วโมง</button>
+                                    <button id="btn-chart-daily" class="btn btn-active" onclick="setTargetChartPeriod('daily')">รายวัน</button>
+                                    <button id="btn-chart-monthly" class="btn btn-outline" onclick="setTargetChartPeriod('monthly')">รายเดือน</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="target-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VIEW 4: Target Database Page -->
+            <div id="view-database" class="page-view hidden">
+                <div class="card glassmorphism-card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <h2 class="card-title"><i class="fa-solid fa-database"></i> ตรวจสอบฐานข้อมูลและเป้าหมายการผลิต (ข้อมูลจริงจาก config.csv)</h2>
+                        <div class="filter-group" style="margin: 0; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <input type="text" id="db-search" placeholder="ค้นหาชื่อไซต์งาน..." class="search-input" style="width: 250px; background: rgba(255,255,255,0.08); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.9rem;">
+                            <select id="db-filter-type" class="filter-select" style="width: 150px; background: rgba(255,255,255,0.08); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; outline: none; cursor: pointer; font-size: 0.9rem;">
+                                <option value="all" style="background: var(--bg-card); color: var(--text-color);">ทุกประเภท (All)</option>
+                                <option value="ppa" style="background: var(--bg-card); color: var(--text-color);">PPA</option>
+                                <option value="epc" style="background: var(--bg-card); color: var(--text-color);">EPC</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto; margin-top: 20px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px; text-align: center;">ID</th>
+                                    <th>ชื่อไซต์งาน (Site Name)</th>
+                                    <th style="width: 120px; text-align: center;">ประเภท</th>
+                                    <th style="text-align: right; width: 140px;">ขนาดติดตั้ง (kWp)</th>
+                                    <th style="text-align: right; width: 160px;">เป้าหมายรายวัน (kWh)</th>
+                                    <th style="text-align: right; width: 180px;">เป้าหมายเดือนนี้ (kWh)</th>
+                                    <th>ที่ตั้ง / จังหวัด</th>
+                                    <th>เบอร์โทร / ผู้ติดต่อ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="db-table-body">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                        <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 8px;"></i> กำลังโหลดข้อมูลตาราง...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="main-footer">
+            <div class="footer-company-info">
+                <strong>บริษัท เคเคอี จำกัด (KKE CO., LTD.)</strong><br>
+                <span>เลขทะเบียนนิติบุคคล: 0405568004834</span> | 
+                <span>ที่อยู่: 213 หมู่ 13 ถนนเลี่ยงเมือง ตำบลบ้านเป็ด อำเภอเมืองขอนแก่น จังหวัดขอนแก่น 40000</span>
+            </div>
+            <p class="footer-copyright">ระบบรายงานข้อมูลการผลิตไฟฟ้าพลังงานแสงอาทิตย์ (Solar Dashboard) &copy; 2026. ดึงข้อมูลแบบเรียลไทม์จากระบบ Huawei FusionSolar</p>
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js?v=3"></script>
+</body>
+</html>
