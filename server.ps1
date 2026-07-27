@@ -421,8 +421,8 @@ try {
         param($scriptRoot)
         Write-Output "Background sync scheduler started."
         while ($true) {
-            # Sleep first, sync every 3600 seconds (1 hour)
-            Start-Sleep -Seconds 3600
+            # Sleep first, sync every 900 seconds (15 minutes)
+            Start-Sleep -Seconds 900
             Write-Output "Triggering background scheduled sync..."
             powershell -NoProfile -ExecutionPolicy Bypass -Command "& '$scriptRoot\server.ps1' -SyncOnly"
         }
