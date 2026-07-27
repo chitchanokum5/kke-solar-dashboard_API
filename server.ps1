@@ -160,8 +160,14 @@ function Sync-FusionSolarData {
                 
                 if ($chunkDevicesRes.success -and $chunkDevicesRes.data) {
                     $devicesResData += $chunkDevicesRes.data
+                } else {
+                    Write-Host "Batch failed: $($chunkDevicesRes.failCode) - $($chunkDevicesRes.data)" -ForegroundColor Red
                 }
-                Start-Sleep -Milliseconds 1000  # Increased sleep to avoid frequency limit during fresh fetch
+                
+                if (($s + 50) -lt $stationCodesList.Count) {
+                    Write-Host "Sleeping 65 seconds to respect FusionSolar API limit (1 call/min)..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds 65
+                }
             }
             
             if ($devicesResData.Count -eq 0) {
