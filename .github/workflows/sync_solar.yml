@@ -1,0 +1,34 @@
+name: FusionSolar API Data Sync
+
+on:
+  schedule:
+    # Runs every 2 hours
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run FusionSolar Sync Script
+      shell: pwsh
+      env:
+        FUSIONSOLAR_USERNAME: ${{ secrets.FUSIONSOLAR_USERNAME }}
+        FUSIONSOLAR_PASSWORD: ${{ secrets.FUSIONSOLAR_PASSWORD }}
+        FUSIONSOLAR_API_URL: https://sg5.fusionsolar.huawei.com
+      run: |
+        ./server.ps1 -SyncOnly
+
+    - name: Commit and Push changes
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add inverter_report.csv alarm_report.csv
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update FusionSolar data [skip ci]" && git push)
