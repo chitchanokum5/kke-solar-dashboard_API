@@ -569,13 +569,10 @@ if ($SyncOnly) {
 }
 
 try {
-    # Check if inverter_report.csv exists, if not do an initial sync on startup
-    $reportPath = Join-Path $PSScriptRoot "inverter_report.csv"
-    if (-not (Test-Path $reportPath)) {
-        Write-Host "inverter_report.csv not found in folder. Launching initial FusionSolar sync..." -ForegroundColor Yellow
-        $syncResult = Sync-FusionSolarData
-        Write-Host "Initial sync result: $syncResult" -ForegroundColor Cyan
-    }
+    # Always perform an initial sync on startup to ensure data is fresh
+    Write-Host "Launching initial FusionSolar sync on startup..." -ForegroundColor Yellow
+    $syncResult = Sync-FusionSolarData
+    Write-Host "Initial sync result: $syncResult" -ForegroundColor Cyan
 
     # Start the background scheduler to run automatic sync every 4 hours (14400 seconds)
     $schedulerScript = {
