@@ -134,7 +134,8 @@ const SYSTEM_TO_CONFIG_MAP = {
     "First Confectionery602": ["First Confectionery"],
     "BMC 138.60 kWp (Eternal Resonac Materials)": ["BMC (Eternal Resin)"],
     "IJTT-HEAD OFFICE": ["IJTT"],
-    "KWM": ["KWM Ph.1", "KWM Ph.2", "KWM Ph.3"]
+    "KWM": ["KWM Ph.1", "KWM Ph.2", "KWM Ph.3"],
+    "PTT CG": ["PTT chester grill"]
 };
 
 // Chart instances
