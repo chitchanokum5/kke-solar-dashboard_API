@@ -783,9 +783,18 @@ function renderDatabaseTable() {
         return siteName;
     };
     
+    // Create a Set of normalized active site names from the current API data
+    const activeSitesSet = new Set(groupedData.map(g => normalizeSiteName(g.site)));
+    
     // Filter targets
     const filtered = allConfigTargets.filter(item => {
         const sysName = getDisplayName(item.siteName);
+        
+        // Hide config targets that do not exist/are not active in the FusionSolar data
+        const isSiteActive = activeSitesSet.has(normalizeSiteName(sysName)) || 
+                             activeSitesSet.has(normalizeSiteName(item.siteName));
+        if (!isSiteActive) return false;
+        
         const matchesSearch = item.siteName.toLowerCase().includes(searchText) ||
                              sysName.toLowerCase().includes(searchText) ||
                              item.location.toLowerCase().includes(searchText);
