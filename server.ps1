@@ -386,7 +386,10 @@ function Sync-FusionSolarData {
 if ($SyncOnly) {
     $result = Sync-FusionSolarData
     Write-Host "SyncOnly result: $result"
-    exit
+    if ($result -like '*"success": false*') {
+        exit 1
+    }
+    exit 0
 }
 
 try {
