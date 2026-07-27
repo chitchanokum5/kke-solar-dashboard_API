@@ -40,7 +40,8 @@ function Sync-FusionSolarData {
     }
     
     if ($apiUrl.EndsWith("/")) { $apiUrl = $apiUrl.Substring(0, $apiUrl.Length - 1) }
-        
+    
+    try {
         # 1. Login to FusionSolar
         $loginUrl = "$apiUrl/thirdData/login"
         $loginBody = @{
