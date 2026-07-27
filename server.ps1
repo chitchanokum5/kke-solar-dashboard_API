@@ -14,6 +14,18 @@ function Sync-FusionSolarData {
     Write-Host " Starting Huawei FusionSolar API sync..." -ForegroundColor Cyan
     Write-Host "----------------------------------------------------------" -ForegroundColor Cyan
     
+    # Helper to enforce Gregorian year under Thai Buddhist Calendar systems
+    function Get-GregorianDate {
+        param(
+            [DateTime]$d = (Get-Date)
+        )
+        $y = $d.Year
+        if ($y -gt 2500) {
+            $y = $y - 543
+        }
+        return [DateTime]::new($y, $d.Month, $d.Day, $d.Hour, $d.Minute, $d.Second, $d.Millisecond)
+    }
+    
     $apiUrl = "https://sg5.fusionsolar.huawei.com"
     $username = ""
     $password = ""
@@ -220,8 +232,8 @@ function Sync-FusionSolarData {
         Write-Host "Found $($inverters.Count) inverters. Fetching monthly KPIs..." -ForegroundColor Cyan
         
         # 4. Fetch daily generation KPIs
-        $date = Get-Date
-        $collectTime = ([DateTimeOffset]($date.Date.AddHours(12))).ToUnixTimeMilliseconds()
+        $gNow = Get-GregorianDate
+        $collectTime = ([DateTimeOffset]($gNow.Date.AddHours(12))).ToUnixTimeMilliseconds()
         $allKpis = @{}
         
         # Fetch in batches of 50
@@ -304,8 +316,8 @@ function Sync-FusionSolarData {
         $allAlarms = @()
         $alarmUrl = "$apiUrl/thirdData/getAlarmList"
         # Query alarms from 7 days ago
-        $alarmBeginTime = ([DateTimeOffset]::Now.AddDays(-7)).ToUnixTimeMilliseconds()
-        $alarmEndTime = ([DateTimeOffset]::Now).ToUnixTimeMilliseconds()
+        $alarmBeginTime = ([DateTimeOffset]($gNow.AddDays(-7))).ToUnixTimeMilliseconds()
+        $alarmEndTime = ([DateTimeOffset]$gNow).ToUnixTimeMilliseconds()
         
         for ($sIdx = 0; $sIdx -lt $stationCodesList.Count; $sIdx += 50) {
             $endIdx = $sIdx + 49
@@ -359,7 +371,7 @@ function Sync-FusionSolarData {
                             alarmName = $alarmNameStr
                             alarmLevel = $levelInt
                             alarmStatus = 1
-                            raiseTime = ([DateTimeOffset]::Now).ToUnixTimeMilliseconds()
+                            raiseTime = ([DateTimeOffset]$gNow).ToUnixTimeMilliseconds()
                         }
                         $allAlarms += $customAlarm
                     }
