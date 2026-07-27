@@ -33,7 +33,7 @@ const PPA_SITES = new Set([
 
 // Map of system station names (returned by API) to config site name(s) in config.csv
 const SYSTEM_TO_CONFIG_MAP = {
-    "โรงสี ต.ไทยเจริญ": ["Thaicharoen Rice Mill"],
+    "โรงสี ต.ไทยเจริญ": ["โรงสี ต.ไทยเจริญ"],
     "หจก. โรงน้ำแข็งจำนงรัตน์ SolarFarm 371.80kWp.": ["Jamnongrat Ice Factory"],
     "โรงสีศรีสกลเพียวไรซ์": ["Srisakol Pure Rice Mill"],
     "วิทยาลัยเทคโนโลยีภาคตะวันออกเฉียงเหนือ": ["North Eastern Technological College"],
@@ -42,11 +42,12 @@ const SYSTEM_TO_CONFIG_MAP = {
     "สินทองไทย รับเบอร์": ["Sin thong Thai Rubber"],
     "โชควัฒนาก่อสร้าง 265.54kWp": ["CHOKWATANA"],
     "YK SD SOLAR ENERGY": ["YKSD solar"],
-    "KKE_TTT": ["Thongthai Ph.1", "Thongthai Ph.2", "Thongthai Ph.3"],
+    "KKE_TTT": ["Thongthai Ph.1,2,3"],
     "TEM Building A": ["TEM A"],
     "TEM Building B": ["TEM B"],
     "TEM Building C": ["TEM C"],
-    "Nachitec": ["Nachitec Ph.2"],
+    "Nachitec": ["Nachitec"],
+    "Nachitec Ph.1": ["Nachitec"],
     "KANTANG 1": ["KANTANG Ph.1"],
     "KANTANG 2": ["KANTANG Ph.2"],
     "Rc farm 1": ["RC Farm Ph.1"],
@@ -65,7 +66,6 @@ const SYSTEM_TO_CONFIG_MAP = {
     "AMW": ["Auto Motion Work"],
     "Chawalit Rice 316.80kWp.": ["Chawalit Rice"],
     "TIA LIANG 532.00 kWp": ["TIA LIANG"],
-    "Siam Cans Industry": ["Siam Cans Industry Ph.2"],
     "Prime beverage co. ltd": ["Prime"],
     "KKF(CY)_ll": ["CY Ph.2"],
     "คลัง KKF": ["Warehouse KKF"],
@@ -83,7 +83,6 @@ const SYSTEM_TO_CONFIG_MAP = {
     "KKF(CY)_l": ["CY Ph.1"],
     "Alumet ANO PDC 771.12 kWp.": ["Alumet Meter2"],
     "CCP1 v.2": ["CCP Ph.1"],
-    "ดำรงวนิช": ["Dumrongvanich Ph.2"],
     "robinson lopburi": ["Robison Lopburi"],
     "NR-FRAM": ["NR Farm"],
     "PHATTANAKIT WOODCHIP CO.,LTD.": ["PHATTANAKIT WOOD"],
@@ -116,7 +115,8 @@ const SYSTEM_TO_CONFIG_MAP = {
     "RIKA JTW HEAT TREATMENT SOLAR ROOFTOP 1329.90kW": ["RIKA"],
     "TOA PAINT": ["TOA"],
     "[BYD]PI-R MOTOR KHON KAEN SOLAR ROOFTOP": ["BYD"],
-    "N-TEQ": ["Ntec Ph.2"],
+    "N-TEQ": ["Ntec"],
+    "Ntec Ph.1": ["Ntec"],
     "Schavakon 298.20 kWp": ["Schavakon"],
     "CY phase 4": ["CY Ph.4+5"],
     "E.Q. RUBBER SOLAR ROOFTOP 1.33 MWp": ["E.Q. RUBBER"],
@@ -134,7 +134,7 @@ const SYSTEM_TO_CONFIG_MAP = {
     "First Confectionery602": ["First Confectionery"],
     "BMC 138.60 kWp (Eternal Resonac Materials)": ["BMC (Eternal Resin)"],
     "IJTT-HEAD OFFICE": ["IJTT"],
-    "KWM": ["KWM Ph.1", "KWM Ph.2", "KWM Ph.3"],
+    "KWM": ["KWM Ph.1,2,3"],
     "PTT CG": ["PTT chester grill"]
 };
 
