@@ -144,10 +144,10 @@ function Sync-FusionSolarData {
             
             Write-Host "Found $($stationsRes.data.Count) stations. Fetching device list..." -ForegroundColor Cyan
             
-            # 3. Get Device List in chunks of 50 stations from API
+            # 3. Get Device List in chunks of 100 stations from API
             $devicesResData = @()
-            for ($s = 0; $s -lt $stationCodesList.Count; $s += 50) {
-                $endIdx = $s + 49
+            for ($s = 0; $s -lt $stationCodesList.Count; $s += 100) {
+                $endIdx = $s + 99
                 if ($endIdx -ge $stationCodesList.Count) { $endIdx = $stationCodesList.Count - 1 }
                 $chunkStations = $stationCodesList[$s..$endIdx]
                 $chunkStationCodes = $chunkStations -join ","
@@ -155,7 +155,7 @@ function Sync-FusionSolarData {
                 $devUrl = "$apiUrl/thirdData/getDevList"
                 $devBody = @{ stationCodes = $chunkStationCodes } | ConvertTo-Json
                 
-                Write-Host "Fetching devices for station batch $([Math]::Floor($s/50) + 1) of $([Math]::Ceiling($stationCodesList.Count/50))..." -ForegroundColor Cyan
+                Write-Host "Fetching devices for station batch $([Math]::Floor($s/100) + 1) of $([Math]::Ceiling($stationCodesList.Count/100))..." -ForegroundColor Cyan
                 $chunkDevicesRes = Invoke-RestMethod -Uri $devUrl -Method Post -Body $devBody -ContentType "application/json" -Headers $headers -WebSession $sessVar
                 
                 if ($chunkDevicesRes.success -and $chunkDevicesRes.data) {
@@ -164,9 +164,9 @@ function Sync-FusionSolarData {
                     Write-Host "Batch failed: $($chunkDevicesRes.failCode) - $($chunkDevicesRes.data)" -ForegroundColor Red
                 }
                 
-                if (($s + 50) -lt $stationCodesList.Count) {
-                    Write-Host "Sleeping 65 seconds to respect FusionSolar API limit (1 call/min)..." -ForegroundColor Yellow
-                    Start-Sleep -Seconds 65
+                if (($s + 100) -lt $stationCodesList.Count) {
+                    Write-Host "Sleeping 125 seconds to respect FusionSolar API limit (1 call/min)..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds 125
                 }
             }
             
