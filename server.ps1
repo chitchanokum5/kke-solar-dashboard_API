@@ -374,6 +374,21 @@ function Sync-FusionSolarData {
         [System.IO.File]::WriteAllBytes($outputPath, [System.Text.Encoding]::UTF8.GetPreamble() + [System.Text.Encoding]::UTF8.GetBytes($csvContent))
         
         Write-Host "Success! Sync complete. Saved to $outputPath" -ForegroundColor Green
+        
+        # Auto-push updated data to GitHub so that the Vercel cloud dashboard stays in sync
+        # Only run this if we are running locally (not in GitHub Actions) and have a .git folder
+        if (-not $env:GITHUB_ACTIONS -and (Test-Path (Join-Path $PSScriptRoot ".git"))) {
+            try {
+                Write-Host "Auto-pushing updated CSVs to GitHub..." -ForegroundColor Cyan
+                git add inverter_report.csv alarm_report.csv
+                git commit -m "Auto-update FusionSolar data from local sync [skip ci]"
+                git push origin main
+                Write-Host "Successfully pushed updated CSVs to GitHub!" -ForegroundColor Green
+            } catch {
+                Write-Host "Failed to push to GitHub: $_" -ForegroundColor Yellow
+            }
+        }
+        
         return '{"success": true, "message": "ดึงข้อมูลอินเวอร์เตอร์ ' + $inverters.Count + ' เครื่อง สำเร็จเรียบร้อย!"}'
     } catch {
         $err = $_.ToString()
