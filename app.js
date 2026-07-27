@@ -133,7 +133,8 @@ const SYSTEM_TO_CONFIG_MAP = {
     "KKF": ["KKF Ph.2"],
     "First Confectionery602": ["First Confectionery"],
     "BMC 138.60 kWp (Eternal Resonac Materials)": ["BMC (Eternal Resin)"],
-    "IJTT-HEAD OFFICE": ["IJTT"]
+    "IJTT-HEAD OFFICE": ["IJTT"],
+    "KWM": ["KWM Ph.1", "KWM Ph.2", "KWM Ph.3"]
 };
 
 // Chart instances
@@ -740,12 +741,53 @@ function renderAlarms(alarms) {
 function renderDatabaseTable() {
     if (!dbTableBody) return;
     
+    // Invert SYSTEM_TO_CONFIG_MAP to map config names back to FusionSolar names
+    const CONFIG_TO_SYSTEM_MAP = {};
+    for (const [sysName, configNames] of Object.entries(SYSTEM_TO_CONFIG_MAP)) {
+        configNames.forEach(cfgName => {
+            CONFIG_TO_SYSTEM_MAP[cfgName.toLowerCase().trim()] = sysName;
+        });
+    }
+    
     const searchText = (dbSearch ? dbSearch.value : '').toLowerCase().trim();
     const filterType = dbFilterType ? dbFilterType.value : 'all';
     
+    // Helper to get display name matching FusionSolar
+    const getDisplayName = (siteName) => {
+        if (!siteName) return '';
+        const configKey = siteName.toLowerCase().trim();
+        
+        let foundSystemName = null;
+        let sisterSitesCount = 0;
+        
+        for (const [sysName, configNames] of Object.entries(SYSTEM_TO_CONFIG_MAP)) {
+            const matchingConfig = configNames.find(c => c.toLowerCase().trim() === configKey);
+            if (matchingConfig) {
+                foundSystemName = sysName;
+                sisterSitesCount = configNames.length;
+                break;
+            }
+        }
+        
+        if (foundSystemName) {
+            if (sisterSitesCount > 1) {
+                return `${foundSystemName} (${siteName})`;
+            } else {
+                return foundSystemName;
+            }
+        }
+        
+        // Capitalize Vgreen to VGreen to match FusionSolar exactly
+        if (configKey === 'vgreen') return 'VGreen';
+        
+        return siteName;
+    };
+    
     // Filter targets
     const filtered = allConfigTargets.filter(item => {
+        const sysName = getDisplayName(item.siteName);
         const matchesSearch = item.siteName.toLowerCase().includes(searchText) ||
+                             sysName.toLowerCase().includes(searchText) ||
                              item.location.toLowerCase().includes(searchText);
         const matchesType = filterType === 'all' || item.type.toLowerCase() === filterType;
         return matchesSearch && matchesType;
@@ -771,9 +813,11 @@ function renderDatabaseTable() {
             `<span class="badge" style="background: rgba(33, 150, 243, 0.15); color: #2196f3; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; width: 60px; text-align: center;">PPA</span>` :
             `<span class="badge" style="background: rgba(76, 175, 80, 0.15); color: #4caf50; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; width: 60px; text-align: center;">EPC</span>`;
             
+        const displayName = getDisplayName(item.siteName);
+            
         tr.innerHTML = `
             <td style="text-align: center; font-weight: bold; color: var(--text-muted);">${item.id}</td>
-            <td style="font-weight: 600; color: var(--text-color);">${item.siteName}</td>
+            <td style="font-weight: 600; color: var(--text-color);">${displayName}</td>
             <td style="text-align: center;">${typeBadge}</td>
             <td style="text-align: right; font-family: var(--font-mono); font-weight: bold; color: var(--text-color);">${item.capacity.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td style="text-align: right; font-family: var(--font-mono); font-weight: bold; color: #2196f3;">${item.dailyTarget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
