@@ -95,21 +95,90 @@ function Sync-FusionSolarData {
             "xsrf-token" = $xsrfToken
         }
         
-        # 2. Get Station List
-        Write-Host "Fetching station list..." -ForegroundColor Cyan
-        $stationsUrl = "$apiUrl/thirdData/getStationList"
-        $stationsRes = Invoke-RestMethod -Uri $stationsUrl -Method Post -Body "{}" -ContentType "application/json" -Headers $headers -WebSession $sessVar
-        
-        if (-not $stationsRes.success -or $stationsRes.data.Count -eq 0) {
-            Write-Host "Failed to fetch stations: $($stationsRes.failCode)" -ForegroundColor Red
-            return '{"success": false, "message": "ดึงรายชื่อไซต์งานโครงการล้มเหลว!"}'
-        }
+        # Define cache paths
+        $stationsCachePath = Join-Path $PSScriptRoot "stations_cache.json"
+        $invertersCachePath = Join-Path $PSScriptRoot "inverters_cache.json"
         
         $stationMap = @{}
         $stationCodesList = @()
-        foreach ($st in $stationsRes.data) {
-            $stationMap[$st.stationCode] = $st.stationName
-            $stationCodesList += $st.stationCode
+        $inverters = @()
+        $useCache = $false
+        
+        if ((Test-Path $stationsCachePath) -and (Test-Path $invertersCachePath)) {
+            try {
+                Write-Host "Loading station list and inverter list from local cache..." -ForegroundColor Yellow
+                $cachedStations = Get-Content $stationsCachePath -Raw | ConvertFrom-Json
+                $cachedInverters = Get-Content $invertersCachePath -Raw | ConvertFrom-Json
+                
+                if ($cachedStations -and $cachedInverters -and $cachedInverters.Count -gt 0) {
+                    foreach ($st in $cachedStations) {
+                        $stationMap[$st.stationCode] = $st.stationName
+                        $stationCodesList += $st.stationCode
+                    }
+                    $inverters = $cachedInverters
+                    $useCache = $true
+                }
+            } catch {
+                Write-Host "Failed to read cache files: $_. Fetching from API instead." -ForegroundColor Yellow
+            }
+        }
+        
+        if (-not $useCache) {
+            # 2. Get Station List from API
+            Write-Host "Fetching station list from FusionSolar API..." -ForegroundColor Cyan
+            $stationsUrl = "$apiUrl/thirdData/getStationList"
+            $stationsRes = Invoke-RestMethod -Uri $stationsUrl -Method Post -Body "{}" -ContentType "application/json" -Headers $headers -WebSession $sessVar
+            
+            if (-not $stationsRes.success -or $stationsRes.data.Count -eq 0) {
+                Write-Host "Failed to fetch stations: $($stationsRes.failCode)" -ForegroundColor Red
+                return '{"success": false, "message": "ดึงรายชื่อไซต์งานโครงการล้มเหลว!"}'
+            }
+            
+            foreach ($st in $stationsRes.data) {
+                $stationMap[$st.stationCode] = $st.stationName
+                $stationCodesList += $st.stationCode
+            }
+            
+            # Save stations to cache
+            $stationsRes.data | ConvertTo-Json -Depth 5 | Out-File -FilePath $stationsCachePath -Encoding utf8
+            
+            Write-Host "Found $($stationsRes.data.Count) stations. Fetching device list..." -ForegroundColor Cyan
+            
+            # 3. Get Device List in chunks of 50 stations from API
+            $devicesResData = @()
+            for ($s = 0; $s -lt $stationCodesList.Count; $s += 50) {
+                $endIdx = $s + 49
+                if ($endIdx -ge $stationCodesList.Count) { $endIdx = $stationCodesList.Count - 1 }
+                $chunkStations = $stationCodesList[$s..$endIdx]
+                $chunkStationCodes = $chunkStations -join ","
+                
+                $devUrl = "$apiUrl/thirdData/getDevList"
+                $devBody = @{ stationCodes = $chunkStationCodes } | ConvertTo-Json
+                
+                Write-Host "Fetching devices for station batch $([Math]::Floor($s/50) + 1) of $([Math]::Ceiling($stationCodesList.Count/50))..." -ForegroundColor Cyan
+                $chunkDevicesRes = Invoke-RestMethod -Uri $devUrl -Method Post -Body $devBody -ContentType "application/json" -Headers $headers -WebSession $sessVar
+                
+                if ($chunkDevicesRes.success -and $chunkDevicesRes.data) {
+                    $devicesResData += $chunkDevicesRes.data
+                }
+                Start-Sleep -Milliseconds 1000  # Increased sleep to avoid frequency limit during fresh fetch
+            }
+            
+            if ($devicesResData.Count -eq 0) {
+                Write-Host "Failed to fetch device list or list is empty." -ForegroundColor Red
+                return '{"success": false, "message": "ดึงข้อมูลรายการอุปกรณ์ล้มเหลวหรือไม่มีอุปกรณ์ในระบบ!"}'
+            }
+            
+            # Filter devTypeId = 1 (Inverter)
+            foreach ($d in $devicesResData) {
+                if ($d.devTypeId -eq 1) {
+                    $inverters += $d
+                }
+            }
+            
+            # Save inverters to cache
+            $inverters | ConvertTo-Json -Depth 5 | Out-File -FilePath $invertersCachePath -Encoding utf8
+            Write-Host "Cached $($inverters.Count) inverters to local storage." -ForegroundColor Green
         }
         
         # Get Real-time Station Health States to detect offline plants
@@ -140,41 +209,6 @@ function Sync-FusionSolarData {
                 Write-Host "Failed to query station health state for batch: $_" -ForegroundColor Yellow
             }
             Start-Sleep -Milliseconds 500
-        }
-        
-        Write-Host "Found $($stationsRes.data.Count) stations. Fetching device list..." -ForegroundColor Cyan
-        
-        # 3. Get Device List in chunks of 50 stations
-        $devicesResData = @()
-        for ($s = 0; $s -lt $stationCodesList.Count; $s += 50) {
-            $endIdx = $s + 49
-            if ($endIdx -ge $stationCodesList.Count) { $endIdx = $stationCodesList.Count - 1 }
-            $chunkStations = $stationCodesList[$s..$endIdx]
-            $chunkStationCodes = $chunkStations -join ","
-            
-            $devUrl = "$apiUrl/thirdData/getDevList"
-            $devBody = @{ stationCodes = $chunkStationCodes } | ConvertTo-Json
-            
-            Write-Host "Fetching devices for station batch $([Math]::Floor($s/50) + 1) of $([Math]::Ceiling($stationCodesList.Count/50))..." -ForegroundColor Cyan
-            $chunkDevicesRes = Invoke-RestMethod -Uri $devUrl -Method Post -Body $devBody -ContentType "application/json" -Headers $headers -WebSession $sessVar
-            
-            if ($chunkDevicesRes.success -and $chunkDevicesRes.data) {
-                $devicesResData += $chunkDevicesRes.data
-            }
-            Start-Sleep -Milliseconds 500
-        }
-        
-        if ($devicesResData.Count -eq 0) {
-            Write-Host "Failed to fetch device list or list is empty." -ForegroundColor Red
-            return '{"success": false, "message": "ดึงข้อมูลรายการอุปกรณ์ล้มเหลวหรือไม่มีอุปกรณ์ในระบบ!"}'
-        }
-        
-        # Filter devTypeId = 1 (Inverter)
-        $inverters = @()
-        foreach ($d in $devicesResData) {
-            if ($d.devTypeId -eq 1) {
-                $inverters += $d
-            }
         }
         
         Write-Host "Found $($inverters.Count) inverters. Fetching monthly KPIs..." -ForegroundColor Cyan
