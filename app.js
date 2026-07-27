@@ -232,40 +232,65 @@ function toggleTheme() {
     updateCharts();
 }
 
+function showToast(message, isSuccess = true) {
+    const notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.bottom = '20px';
+    notification.style.right = '20px';
+    notification.style.background = isSuccess ? '#00e676' : '#ff1744';
+    notification.style.color = '#fff';
+    notification.style.padding = '12px 24px';
+    notification.style.borderRadius = '8px';
+    notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    notification.style.zIndex = '9999';
+    notification.style.fontFamily = 'Prompt, sans-serif';
+    notification.style.fontWeight = '600';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+function getCacheBustedUrl(url) {
+    return url + '?t=' + new Date().getTime();
+}
+
 async function handleRefreshClick() {
     showLoader(true);
-    lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังดึงข้อมูลจาก FusionSolar...`;
-    try {
-        const syncResponse = await fetch('/api/sync', { method: 'POST' });
-        if (!syncResponse.ok) {
-            throw new Error(`Sync server responded with status: ${syncResponse.status}`);
+    
+    // Check if we are running locally or on the cloud
+    const isLocal = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' || 
+                    window.location.hostname === '';
+                    
+    if (isLocal) {
+        lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังดึงข้อมูลจาก FusionSolar...`;
+        try {
+            const syncResponse = await fetch('/api/sync', { method: 'POST' });
+            if (!syncResponse.ok) {
+                throw new Error(`Sync server responded with status: ${syncResponse.status}`);
+            }
+            const syncResult = await syncResponse.json();
+            if (!syncResult.success) {
+                throw new Error(syncResult.message || 'Sync failed');
+            }
+            await loadDashboardData();
+            showToast(syncResult.message || 'ดึงข้อมูลสำเร็จ!');
+        } catch (error) {
+            console.error('Refresh sync error:', error);
+            alert('เกิดข้อผิดพลาดในการดึงข้อมูลจาก FusionSolar: ' + error.message);
+            await loadDashboardData();
         }
-        const syncResult = await syncResponse.json();
-        if (!syncResult.success) {
-            throw new Error(syncResult.message || 'Sync failed');
+    } else {
+        // Cloud mode (e.g. Vercel): Refresh from Vercel static assets with cache busting
+        lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังโหลดข้อมูลล่าสุดจากคลาวด์...`;
+        try {
+            await loadDashboardData();
+            showToast('รีเฟรชและโหลดข้อมูลล่าสุดจากคลาวด์แล้ว!');
+        } catch (error) {
+            console.error('Refresh load error:', error);
+            showToast('การรีเฟรชข้อมูลล้มเหลว', false);
+            showLoader(false);
         }
-        await loadDashboardData();
-        
-        // Show temporary notification instead of blocking alert
-        const notification = document.createElement('div');
-        notification.style.position = 'fixed';
-        notification.style.bottom = '20px';
-        notification.style.right = '20px';
-        notification.style.background = '#00e676';
-        notification.style.color = '#fff';
-        notification.style.padding = '12px 24px';
-        notification.style.borderRadius = '8px';
-        notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-        notification.style.zIndex = '9999';
-        notification.style.fontFamily = 'Prompt, sans-serif';
-        notification.style.fontWeight = '600';
-        notification.textContent = syncResult.message || 'ดึงข้อมูลสำเร็จ!';
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
-    } catch (error) {
-        console.error('Refresh sync error:', error);
-        alert('เกิดข้อผิดพลาดในการดึงข้อมูลจาก FusionSolar: ' + error.message);
-        await loadDashboardData();
     }
 }
 
@@ -395,7 +420,7 @@ function setupEventListeners() {
 // Fetch Target Configuration Data
 async function loadTargets() {
     try {
-        const configUrl = 'config.csv';
+        const configUrl = getCacheBustedUrl('config.csv');
         const response = await fetch(configUrl);
         if (!response.ok) throw new Error("Failed to fetch configuration sheet");
         const csvText = await response.text();
@@ -564,7 +589,7 @@ async function loadDashboardData() {
     
     try {
         await loadTargets(); // Fetch targets first
-        const response = await fetch(SHEET_CSV_URL);
+        const response = await fetch(getCacheBustedUrl(SHEET_CSV_URL));
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -605,7 +630,7 @@ async function loadAlarmData() {
     if (!alarmContainer || !alarmCountBadge) return;
     
     try {
-        const response = await fetch('alarm_report.csv');
+        const response = await fetch(getCacheBustedUrl('alarm_report.csv'));
         if (!response.ok) {
             // If the file is not found (e.g. no alarms have ever run), treat it as 0 alarms
             renderAlarms([]);
