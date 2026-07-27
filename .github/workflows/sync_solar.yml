@@ -1,6 +1,9 @@
 name: FusionSolar API Data Sync
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     # Runs every 2 hours
     - cron: '0 */2 * * *'
