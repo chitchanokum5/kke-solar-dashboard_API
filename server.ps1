@@ -74,6 +74,50 @@ function Save-CSVHelper {
     return $lines -join "`r`n"
 }
 
+# Helper to check if a station name is in config.csv
+function Is-StationActive {
+    param([string]$stationName)
+    if (-not $stationName) { return $false }
+    
+    # Load config.csv site names if not already loaded
+    if ($script:activeConfigSites -eq $null) {
+        $script:activeConfigSites = @{}
+        $csvPath = Join-Path $PSScriptRoot "config.csv"
+        if (Test-Path $csvPath) {
+            $csvText = [System.IO.File]::ReadAllText($csvPath, [System.Text.Encoding]::UTF8)
+            $rows = Parse-CSVHelper $csvText
+            for ($i = 3; $i -lt $rows.Count; $i++) {
+                $row = $rows[$i]
+                if ($row.Count -gt 4 -and $row[4]) {
+                    $script:activeConfigSites[$row[4].Trim().ToLower()] = $true
+                }
+                if ($row.Count -gt 15 -and $row[15]) {
+                    $script:activeConfigSites[$row[15].Trim().ToLower()] = $true
+                }
+            }
+        }
+    }
+    
+    $normName = $stationName.Trim().ToLower()
+    
+    # Common mappings
+    if ($normName -eq "ptt cg") { $normName = "ptt chester grill" }
+    if ($normName -eq "siam cans") { $normName = "siam cans industry" }
+    
+    if ($script:activeConfigSites.ContainsKey($normName)) {
+        return $true
+    }
+    
+    # Substring checks
+    foreach ($cfgSite in $script:activeConfigSites.Keys) {
+        if ($normName.Contains($cfgSite) -or $cfgSite.Contains($normName)) {
+            return $true
+        }
+    }
+    
+    return $false
+}
+
 # Function to pull daily energy yield from Huawei FusionSolar OpenAPI and save as CSV
 function Sync-FusionSolarData {
     Write-Host "----------------------------------------------------------" -ForegroundColor Cyan
@@ -181,7 +225,14 @@ function Sync-FusionSolarData {
                         $stationMap[$st.stationCode] = $st.stationName
                         $stationCodesList += $st.stationCode
                     }
-                    $inverters = $cachedInverters
+                    $inverters = @()
+                    foreach ($inv in $cachedInverters) {
+                        $stName = ""
+                        if ($stationMap.ContainsKey($inv.stationCode)) { $stName = $stationMap[$inv.stationCode] }
+                        if (Is-StationActive $stName) {
+                            $inverters += $inv
+                        }
+                    }
                     $useCache = $true
                 }
             } catch {
@@ -241,10 +292,14 @@ function Sync-FusionSolarData {
                 return '{"success": false, "message": "ดึงข้อมูลรายการอุปกรณ์ล้มเหลวหรือไม่มีอุปกรณ์ในระบบ!"}'
             }
             
-            # Filter devTypeId = 1 (Inverter)
+            # Filter devTypeId = 1 (Inverter) and active stations only
             foreach ($d in $devicesResData) {
                 if ($d.devTypeId -eq 1) {
-                    $inverters += $d
+                    $stName = ""
+                    if ($stationMap.ContainsKey($d.stationCode)) { $stName = $stationMap[$d.stationCode] }
+                    if (Is-StationActive $stName) {
+                        $inverters += $d
+                    }
                 }
             }
             
@@ -328,7 +383,7 @@ function Sync-FusionSolarData {
                     $allKpis[$devId][$day] = $energy
                 }
             }
-            Start-Sleep -Milliseconds 1000
+            Start-Sleep -Seconds 3
         }
         
         # 5. Format into CSV structure
@@ -522,13 +577,13 @@ try {
         Write-Host "Initial sync result: $syncResult" -ForegroundColor Cyan
     }
 
-    # Start the background scheduler to run automatic sync every 1 hour (3600 seconds)
+    # Start the background scheduler to run automatic sync every 4 hours (14400 seconds)
     $schedulerScript = {
         param($scriptRoot)
         Write-Output "Background sync scheduler started."
         while ($true) {
-            # Sleep first, sync every 900 seconds (15 minutes)
-            Start-Sleep -Seconds 900
+            # Sleep first, sync every 14400 seconds (4 hours)
+            Start-Sleep -Seconds 14400
             Write-Output "Triggering background scheduled sync..."
             powershell -NoProfile -ExecutionPolicy Bypass -Command "& '$scriptRoot\server.ps1' -SyncOnly"
         }
