@@ -329,6 +329,7 @@
                                     <th style="text-align: right; width: 180px;">เป้าหมายเดือนนี้ (kWh)</th>
                                     <th>ที่ตั้ง / จังหวัด</th>
                                     <th>เบอร์โทร / ผู้ติดต่อ</th>
+                                    <th style="text-align: center; width: 100px;">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody id="db-table-body">
@@ -352,6 +353,51 @@
             </div>
             <p class="footer-copyright">ระบบรายงานข้อมูลการผลิตไฟฟ้าพลังงานแสงอาทิตย์ (Solar Dashboard) &copy; 2026. ดึงข้อมูลแบบเรียลไทม์จากระบบ Huawei FusionSolar</p>
         </footer>
+    </div>
+
+    <!-- Edit Database Modal -->
+    <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 10000; transition: all 0.3s ease;">
+        <div class="modal-content glassmorphism-card" style="width: 480px; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(18, 18, 18, 0.85); box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-color); font-weight: bold;"><i class="fa-solid fa-pen-to-square" style="color: #fbc02d; margin-right: 8px;"></i> แก้ไขเป้าหมายและกำลังติดตั้ง</h3>
+                <button id="close-modal-btn" type="button" style="background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edit-form" style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="hidden" id="edit-site-id">
+                <input type="hidden" id="edit-site-type">
+                
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">ชื่อไซต์งาน (Site Name)</label>
+                    <input type="text" id="edit-site-name" readonly style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-muted); font-weight: bold; cursor: not-allowed; outline: none;">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">ประเภท (Type)</label>
+                        <input type="text" id="edit-site-type-display" readonly style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-muted); font-weight: bold; cursor: not-allowed; outline: none;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">ขนาดติดตั้ง (kWp)</label>
+                        <input type="number" id="edit-site-capacity" step="0.01" required style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); font-weight: bold; outline: none;">
+                    </div>
+                </div>
+                
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">เป้าหมายรายวัน (Daily Target - kWh)</label>
+                    <input type="number" id="edit-site-daily" step="0.01" required style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); font-weight: bold; outline: none;">
+                </div>
+                
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">เป้าหมายเดือนนี้ (Monthly Target - kWh)</label>
+                    <input type="number" id="edit-site-monthly" step="0.01" required style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); font-weight: bold; outline: none;">
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <button type="button" id="cancel-modal-btn" style="background: rgba(255,255,255,0.1); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s;">ยกเลิก</button>
+                    <button type="submit" style="background: #4caf50; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s;">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Application Script -->
