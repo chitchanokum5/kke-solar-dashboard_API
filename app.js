@@ -1748,6 +1748,33 @@ function updateMainTargetChart() {
         }
     });
     
+    // 3. Generate dynamic HSL color scale according to target percentage (20% is Red, 100% is Green)
+    const barBackgroundColors = [];
+    const barBorderColors = [];
+    
+    for (let i = 0; i < 31; i++) {
+        const val = dailyActuals[i];
+        if (val === 0 || dailyTargetSum === 0) {
+            barBackgroundColors.push(isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)');
+            barBorderColors.push(isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)');
+        } else {
+            const pct = (val / dailyTargetSum) * 100;
+            
+            let hue = 0;
+            if (pct <= 20) {
+                hue = 0; // Red
+            } else if (pct >= 100) {
+                hue = 120; // Green
+            } else {
+                // Interpolate hue from 0 (Red) at 20% to 120 (Green) at 100%
+                hue = ((pct - 20) / 80) * 120;
+            }
+            
+            barBackgroundColors.push(`hsla(${hue}, 85%, ${isDark ? '45%' : '50%'}, 0.75)`);
+            barBorderColors.push(`hsla(${hue}, 85%, ${isDark ? '55%' : '40%'}, 1)`);
+        }
+    }
+    
     // Make daily targets array of 31 items
     const dailyTargets = Array(31).fill(dailyTargetSum);
     
@@ -1762,8 +1789,8 @@ function updateMainTargetChart() {
                     type: 'bar',
                     label: 'ผลผลิตไฟฟ้าจริงรายวัน (Actual Yield) - kWh',
                     data: dailyActuals,
-                    backgroundColor: isDark ? 'rgba(0, 188, 212, 0.7)' : 'rgba(0, 112, 243, 0.7)',
-                    borderColor: isDark ? '#00bcd4' : '#0070f3',
+                    backgroundColor: barBackgroundColors,
+                    borderColor: barBorderColors,
                     borderWidth: 1.5,
                     borderRadius: 4
                 },
