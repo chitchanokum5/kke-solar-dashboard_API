@@ -1,7 +1,7 @@
 // Google Sheets Solar Inverter Dashboard Logic
 
 // Constants
-const SHEET_CSV_URL = 'inverter_report.csv';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1egWQQUd-rF3qquD2sDmWcH-ae7EHmxkBGYxxYDlJtE8/export?format=csv&gid=0';
 const ITEMS_PER_PAGE = 15;
 
 // State management
@@ -253,7 +253,8 @@ function showToast(message, isSuccess = true) {
 }
 
 function getCacheBustedUrl(url) {
-    return url + '?t=' + new Date().getTime();
+    const separator = url.includes('?') ? '&' : '?';
+    return url + separator + 't=' + new Date().getTime();
 }
 
 async function handleRefreshClick() {
@@ -937,17 +938,31 @@ function processData(parsedRows) {
     inverterData = [];
     maxDailyValueGlobal = 1;
     
-    // Process inverter rows (starting from index 1, since index 0 is the header)
-    for (let i = 1; i < parsedRows.length; i++) {
+    // Find header row with 'Device name' or 'Total String Capacity'
+    let headerRowIdx = -1;
+    for (let i = 0; i < parsedRows.length; i++) {
+        const row = parsedRows[i];
+        if (row && row.includes('Device name')) {
+            headerRowIdx = i;
+            break;
+        }
+    }
+    
+    if (headerRowIdx === -1) {
+        throw new Error("โครงสร้างไฟล์รายงานไม่ถูกต้อง (ไม่พบแถวหัวตาราง Device name)!");
+    }
+    
+    // Process inverter rows starting from the row after header
+    for (let i = headerRowIdx + 1; i < parsedRows.length; i++) {
         const row = parsedRows[i];
         
         // Skip empty or short rows
         if (!row || row.length < 4) continue;
         
-        const siteName = (row[0] || '').replace(/^\ufeff/, '').replace(/[\s\u00a0]+/g, ' ').trim();
-        const deviceName = (row[1] || '').replace(/[\s\u00a0]+/g, ' ').trim();
+        const siteName = (row[1] || '').replace(/^\ufeff/, '').replace(/[\s\u00a0]+/g, ' ').trim();
+        const deviceName = (row[2] || '').replace(/[\s\u00a0]+/g, ' ').trim();
         
-        // Skip header/summary/empty rows
+        // Skip empty entries
         if (!siteName && !deviceName) continue;
         
         // Skip numeric-only junk rows
@@ -967,7 +982,7 @@ function processData(parsedRows) {
         
         if (isMetadata(siteName)) continue;
         
-        const capacityVal = parseFloat(row[2]) || null;
+        const capacityVal = parseFloat(row[3]) || null;
         
         // Days columns start from index 4 to index 34 (31 days)
         const dailyGen = [];
@@ -986,7 +1001,6 @@ function processData(parsedRows) {
             }
         }
         
-        // We only save rows that have a device name or a valid total generation
         if (deviceName || siteName) {
             if (!deviceName && rowTotalGen === 0) continue;
             
