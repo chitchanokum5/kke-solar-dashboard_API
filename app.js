@@ -150,8 +150,6 @@ const chartSiteSelect = document.getElementById('chart-site-select');
 const btnChartHourly = document.getElementById('btn-chart-hourly');
 const btnChartDaily = document.getElementById('btn-chart-daily');
 const btnChartMonthly = document.getElementById('btn-chart-monthly');
-const alarmContainer = document.getElementById('alarm-container');
-const alarmCountBadge = document.getElementById('alarm-count-badge');
 const loader = document.getElementById('loader');
 const errorBanner = document.getElementById('error-banner');
 const errorMessage = document.getElementById('error-message');
@@ -578,7 +576,6 @@ async function loadDashboardData() {
         }
         
         processData(parsed);
-        await loadAlarmData();
         showLoader(false);
         
         // Stamp timestamp
@@ -601,117 +598,7 @@ function showLoader(show) {
     }
 }
 
-// Load and Render Alarms & Abnormalities
-async function loadAlarmData() {
-    if (!alarmContainer || !alarmCountBadge) return;
-    
-    try {
-        const response = await fetch(getCacheBustedUrl('alarm_report.csv'));
-        if (!response.ok) {
-            // If the file is not found (e.g. no alarms have ever run), treat it as 0 alarms
-            renderAlarms([]);
-            return;
-        }
-        
-        const csvText = await response.text();
-        const rows = parseCSV(csvText);
-        
-        if (rows.length < 2) {
-            renderAlarms([]);
-            return;
-        }
-        
-        const alarms = [];
-        // Skip header row
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length < 5) continue;
-            
-            alarms.push({
-                site: row[0] || 'ไม่ระบุไซต์',
-                device: row[1] || 'อินเวอร์เตอร์',
-                name: row[2] || 'ความผิดปกติ',
-                severity: row[3] || 'คำเตือน (Warning)',
-                time: row[4] || '-'
-            });
-        }
-        
-        renderAlarms(alarms);
-    } catch (error) {
-        console.error("Error loading alarms:", error);
-        renderAlarms([]);
-    }
-}
 
-function renderAlarms(alarms) {
-    if (!alarmContainer || !alarmCountBadge) return;
-    
-    alarmContainer.innerHTML = '';
-    
-    if (alarms.length === 0) {
-        alarmCountBadge.textContent = 'ปกติ';
-        alarmCountBadge.className = 'count-badge status-normal';
-        
-        alarmContainer.innerHTML = `
-            <div class="alarm-empty">
-                <i class="fa-solid fa-circle-check" style="font-size: 1.25rem;"></i>
-                <span>ระบบทำงานปกติ: ไม่พบสัญญาณเตือนหรือข้อผิดพลาดใดๆ ในระบบในรอบ 7 วันที่ผ่านมา</span>
-            </div>
-        `;
-        return;
-    }
-    
-    alarmCountBadge.textContent = `${alarms.length} รายการ`;
-    alarmCountBadge.className = 'count-badge status-warning-badge';
-    
-    alarms.forEach(al => {
-        const item = document.createElement('div');
-        item.className = 'alarm-item';
-        
-        let severityClass = 'severity-warning';
-        let severityIcon = '<i class="fa-solid fa-triangle-exclamation"></i>';
-        
-        const sevLower = al.severity.toLowerCase();
-        if (sevLower.includes('วิกฤต') || sevLower.includes('critical')) {
-            severityClass = 'severity-critical';
-            severityIcon = '<i class="fa-solid fa-radiation animate-pulse"></i>';
-        } else if (sevLower.includes('รุนแรง') || sevLower.includes('major')) {
-            severityClass = 'severity-major';
-            severityIcon = '<i class="fa-solid fa-circle-exclamation"></i>';
-        } else if (sevLower.includes('ปานกลาง') || sevLower.includes('minor')) {
-            severityClass = 'severity-minor';
-            severityIcon = '<i class="fa-solid fa-triangle-exclamation"></i>';
-        } else if (sevLower.includes('คำเตือน') || sevLower.includes('warning')) {
-            severityClass = 'severity-warning';
-            severityIcon = '<i class="fa-solid fa-circle-info"></i>';
-        }
-        
-        // Translate custom offline alarms to Thai
-        let alarmName = al.name;
-        if (alarmName === "Station Offline (Communication Failure)") {
-            alarmName = "สถานีออฟไลน์ / ขาดการติดต่อ (Station Offline)";
-        } else if (alarmName === "Station Faulty (Partial Offline)") {
-            alarmName = "สถานีพบข้อผิดพลาด / ออฟไลน์บางส่วน (Station Faulty)";
-        }
-        
-        item.innerHTML = `
-            <div class="alarm-item-severity ${severityClass}">
-                ${severityIcon}
-            </div>
-            <div class="alarm-item-content">
-                <div class="alarm-item-title">${alarmName}</div>
-                <div class="alarm-item-meta">
-                    <span><i class="fa-solid fa-industry"></i> ${al.site}</span>
-                    <span><i class="fa-solid fa-microchip"></i> ${al.device}</span>
-                    <span><i class="fa-solid fa-triangle-exclamation"></i> ${al.severity}</span>
-                    <span><i class="fa-solid fa-clock"></i> ${al.time}</span>
-                </div>
-            </div>
-        `;
-        
-        alarmContainer.appendChild(item);
-    });
-}
 
 function renderDatabaseTable() {
     if (!dbTableBody) return;
