@@ -142,6 +142,7 @@ const SYSTEM_TO_CONFIG_MAP = {
 let dailyTrendChart = null;
 let siteDistributionChart = null;
 let targetComparisonChart = null;
+let mainTargetChart = null;
 let chartPeriod = 'daily'; // 'daily' or 'monthly'
 let chartSelectedSite = 'all';
 
@@ -1378,6 +1379,7 @@ function updateCharts() {
     
     // Update target comparison chart
     updateTargetComparisonChart();
+    updateMainTargetChart();
 }
 
 // Populating Site select inside target comparison card
@@ -1712,6 +1714,120 @@ function updateTargetComparisonChart() {
             }
         });
     }
+}
+
+// New Main Page Daily Target Comparison Chart
+function updateMainTargetChart() {
+    const isDark = document.body.classList.contains('dark-theme');
+    const textColor = isDark ? '#8b9bb4' : '#62728c';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    
+    const chartCanvas = document.getElementById('main-target-chart');
+    if (!chartCanvas) return;
+    const ctx = chartCanvas.getContext('2d');
+    
+    if (mainTargetChart) {
+        mainTargetChart.destroy();
+    }
+    
+    // 1. Calculate actual daily sums from filteredData
+    const dailyActuals = Array(31).fill(0);
+    filteredData.forEach(item => {
+        item.daily.forEach((val, idx) => {
+            dailyActuals[idx] += val;
+        });
+    });
+    
+    // 2. Calculate daily target sum for current filtered selection
+    let dailyTargetSum = 0;
+    const uniqueSites = [...new Set(filteredData.map(item => item.site))];
+    uniqueSites.forEach(siteName => {
+        const target = getSiteTarget(siteName);
+        if (target) {
+            dailyTargetSum += target.dailyTarget;
+        }
+    });
+    
+    // Make daily targets array of 31 items
+    const dailyTargets = Array(31).fill(dailyTargetSum);
+    
+    const labels = Array.from({length: 31}, (_, i) => `${i + 1}`);
+    
+    mainTargetChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'ผลผลิตไฟฟ้าจริงรายวัน (Actual Yield) - kWh',
+                    data: dailyActuals,
+                    backgroundColor: isDark ? 'rgba(0, 188, 212, 0.7)' : 'rgba(0, 112, 243, 0.7)',
+                    borderColor: isDark ? '#00bcd4' : '#0070f3',
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                },
+                {
+                    type: 'line',
+                    label: 'เป้าหมายการผลิตรายวัน (Daily Target) - kWh',
+                    data: dailyTargets,
+                    borderColor: '#ff1744',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0,
+                    pointHitRadius: 0,
+                    tension: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { color: textColor, font: { family: 'Prompt', size: 12 } }
+                },
+                tooltip: {
+                    padding: 12,
+                    cornerRadius: 8,
+                    backgroundColor: isDark ? '#161e31' : '#ffffff',
+                    titleColor: isDark ? '#ffffff' : '#1a2536',
+                    bodyColor: isDark ? '#f0f4f9' : '#1a2536',
+                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: function(context) {
+                            return `วันที่ ${context[0].label}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, font: { family: 'Prompt', size: 11 } },
+                    title: {
+                        display: true,
+                        text: 'วันที่ในเดือนนี้',
+                        color: textColor,
+                        font: { family: 'Prompt', size: 12 }
+                    }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, font: { family: 'Inter' } },
+                    title: {
+                        display: true,
+                        text: 'ปริมาณพลังงานไฟฟ้า (kWh)',
+                        color: textColor,
+                        font: { family: 'Prompt', size: 12 }
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Render Data Table
