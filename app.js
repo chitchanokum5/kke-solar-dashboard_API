@@ -394,7 +394,7 @@ function setupEventListeners() {
 // Fetch Target Configuration Data
 async function loadTargets() {
     try {
-        const configUrl = getCacheBustedUrl('config.csv');
+        const configUrl = getCacheBustedUrl('https://docs.google.com/spreadsheets/d/1egWQQUd-rF3qquD2sDmWcH-ae7EHmxkBGYxxYDlJtE8/export?format=csv&gid=263828319');
         const response = await fetch(configUrl);
         if (!response.ok) throw new Error("Failed to fetch configuration sheet");
         const csvText = await response.text();
@@ -695,11 +695,6 @@ function renderDatabaseTable() {
             <td style="text-align: right; font-family: var(--font-mono); font-weight: bold; color: #4caf50;">${item.monthlyTarget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td style="color: var(--text-muted);">${item.location}</td>
             <td style="color: var(--text-muted);">${item.tel}</td>
-            <td style="text-align: center;">
-                <button class="btn-edit" data-id="${item.id}" data-type="${item.type}" style="background: rgba(255, 235, 59, 0.1); color: #fbc02d; border: 1px solid rgba(255, 235, 59, 0.2); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fa-solid fa-pen-to-square"></i> แก้ไข
-                </button>
-            </td>
         `;
         
         dbTableBody.appendChild(tr);
@@ -1854,95 +1849,4 @@ function exportCSV() {
     document.body.removeChild(link);
 }
 
-// ==========================================
-// TARGET DATABASE EDIT MODAL LOGIC
-// ==========================================
-const editModal = document.getElementById('edit-modal');
-const editForm = document.getElementById('edit-form');
-const editSiteId = document.getElementById('edit-site-id');
-const editSiteType = document.getElementById('edit-site-type');
-const editSiteName = document.getElementById('edit-site-name');
-const editSiteTypeDisplay = document.getElementById('edit-site-type-display');
-const editSiteCapacity = document.getElementById('edit-site-capacity');
-const editSiteDaily = document.getElementById('edit-site-daily');
-const editSiteMonthly = document.getElementById('edit-site-monthly');
-const closeModalBtn = document.getElementById('close-modal-btn');
-const cancelModalBtn = document.getElementById('cancel-modal-btn');
 
-// Open Edit Modal
-function openEditModal(id, type) {
-    const item = allConfigTargets.find(t => t.id.toString() === id.toString() && t.type.toUpperCase() === type.toUpperCase());
-    if (!item) return;
-    
-    editSiteId.value = item.id;
-    editSiteType.value = item.type;
-    editSiteName.value = item.siteName;
-    editSiteTypeDisplay.value = item.type;
-    editSiteCapacity.value = item.capacity;
-    editSiteDaily.value = item.dailyTarget;
-    editSiteMonthly.value = item.monthlyTarget;
-    
-    editModal.style.display = 'flex';
-}
-
-// Close Modal
-function closeEditModal() {
-    editModal.style.display = 'none';
-}
-
-if (closeModalBtn) closeModalBtn.addEventListener('click', closeEditModal);
-if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeEditModal);
-
-// Event delegation for Edit button in DB table
-if (dbTableBody) {
-    dbTableBody.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-edit');
-        if (btn) {
-            const id = btn.getAttribute('data-id');
-            const type = btn.getAttribute('data-type');
-            openEditModal(id, type);
-        }
-    });
-}
-
-// Handle form submit
-if (editForm) {
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const payload = {
-            id: parseInt(editSiteId.value),
-            type: editSiteType.value,
-            capacity: parseFloat(editSiteCapacity.value),
-            dailyTarget: parseFloat(editSiteDaily.value),
-            monthlyTarget: parseFloat(editSiteMonthly.value)
-        };
-        
-        showLoader(true);
-        try {
-            const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : 'http://localhost:8000';
-            const response = await fetch(`${host}/api/save-config`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            const result = await response.json();
-            if (response.ok && result.success) {
-                alert(result.message);
-                closeEditModal();
-                // Reload targets and dashboard data
-                await loadDashboardData();
-            } else {
-                alert(result.message || 'บันทึกข้อมูลล้มเหลว!');
-                showLoader(false);
-            }
-        } catch (error) {
-            console.error('Error saving config:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: กรุณาตรวจสอบว่าเซิร์ฟเวอร์โลคอล (server.ps1) กำลังเปิดใช้งานอยู่!');
-            showLoader(false);
-        }
-    });
-}
