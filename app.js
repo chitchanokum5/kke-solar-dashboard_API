@@ -1781,6 +1781,35 @@ function updateMainTargetChart() {
                 }
             ]
         },
+        plugins: [{
+            id: 'barLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx, data, chartArea: { top, bottom, left, right } } = chart;
+                ctx.save();
+                ctx.font = 'bold 9px Prompt, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                
+                const actualMeta = chart.getDatasetMeta(0);
+                const targetVal = data.datasets[1].data[0];
+                
+                if (targetVal > 0) {
+                    actualMeta.data.forEach((bar, index) => {
+                        const val = data.datasets[0].data[index];
+                        if (val > 0) {
+                            const pct = ((val / targetVal) * 100).toFixed(0) + '%';
+                            ctx.fillStyle = val >= targetVal ? '#00e676' : '#ffb300';
+                            
+                            // Prevent drawing label outside the chart area
+                            if (bar.x >= left && bar.x <= right && bar.y >= top && bar.y <= bottom) {
+                                ctx.fillText(pct, bar.x, bar.y - 4);
+                            }
+                        }
+                    });
+                }
+                ctx.restore();
+            }
+        }],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -1800,6 +1829,25 @@ function updateMainTargetChart() {
                     callbacks: {
                         title: function(context) {
                             return `วันที่ ${context[0].label}`;
+                        },
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kWh';
+                            }
+                            
+                            // Append percentage comparison for actual daily yield dataset
+                            if (context.datasetIndex === 0) {
+                                const targetVal = context.chart.data.datasets[1].data[0];
+                                if (targetVal > 0) {
+                                    const pct = ((context.parsed.y / targetVal) * 100).toFixed(1);
+                                    label += ` (${pct}% เทียบเป้ารายวัน)`;
+                                }
+                            }
+                            return label;
                         }
                     }
                 }
@@ -1823,7 +1871,8 @@ function updateMainTargetChart() {
                         text: 'ปริมาณพลังงานไฟฟ้า (kWh)',
                         color: textColor,
                         font: { family: 'Prompt', size: 12 }
-                    }
+                    },
+                    grace: '10%'
                 }
             }
         }
