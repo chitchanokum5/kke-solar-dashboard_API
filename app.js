@@ -258,67 +258,14 @@ function getCacheBustedUrl(url) {
 
 async function handleRefreshClick() {
     showLoader(true);
-    
-    // Check if we are running locally or on the cloud
-    const isLocal = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.hostname === '';
-                    
-    if (isLocal) {
-        lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังดึงข้อมูลจาก FusionSolar...`;
-        try {
-            const syncResponse = await fetch('/api/sync', { method: 'POST' });
-            if (!syncResponse.ok) {
-                throw new Error(`Sync server responded with status: ${syncResponse.status}`);
-            }
-            const syncResult = await syncResponse.json();
-            if (!syncResult.success) {
-                throw new Error(syncResult.message || 'Sync failed');
-            }
-            await loadDashboardData();
-            showToast(syncResult.message || 'ดึงข้อมูลสำเร็จ!');
-        } catch (error) {
-            console.error('Refresh sync error:', error);
-            alert('เกิดข้อผิดพลาดในการดึงข้อมูลจาก FusionSolar: ' + error.message);
-            await loadDashboardData();
-        }
-    } else {
-        // Cloud mode (e.g. Vercel): Try to trigger local sync server first if it runs on the user's PC
-        let triggeredLocal = false;
-        try {
-            lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังสั่งดึงข้อมูลล่าสุดจาก FusionSolar API...`;
-            const syncResponse = await fetch('http://localhost:8000/api/sync', { 
-                method: 'POST',
-                headers: { 'Accept': 'application/json' }
-            });
-            
-            if (syncResponse.ok) {
-                const syncResult = await syncResponse.json();
-                if (syncResult.success) {
-                    showToast('ดึงข้อมูลล่าสุดจาก API หัวเว่ยผ่านเครื่องคอมพิวเตอร์ของคุณสำเร็จ! (กำลังอัปเดตคลาวด์)');
-                    triggeredLocal = true;
-                    // Wait 4 seconds for Git push and Vercel build to register
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                }
-            }
-        } catch (localError) {
-            // Local server is not running or not reachable, fallback to normal cloud cache reload
-            console.log('Local sync server not reachable, reloading cloud cache.');
-        }
-        
-        lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังโหลดข้อมูลหน้าจอ...`;
-        try {
-            await loadDashboardData();
-            if (triggeredLocal) {
-                showToast('อัปเดตข้อมูลแดชบอร์ดจาก Huawei สำเร็จ!');
-            } else {
-                showToast('รีเฟรชและโหลดข้อมูลล่าสุดจากคลาวด์แล้ว!');
-            }
-        } catch (error) {
-            console.error('Refresh load error:', error);
-            showToast('การรีเฟรชข้อมูลล้มเหลว', false);
-            showLoader(false);
-        }
+    lastUpdated.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังโหลดข้อมูลหน้าจอ...`;
+    try {
+        await loadDashboardData();
+        showToast('รีเฟรชและโหลดข้อมูลล่าสุดเรียบร้อยแล้ว!');
+    } catch (error) {
+        console.error('Refresh load error:', error);
+        showToast('การรีเฟรชข้อมูลล้มเหลว', false);
+        showLoader(false);
     }
 }
 
@@ -1212,8 +1159,6 @@ function applyFilters() {
 
 // Group filtered inverter data by site
 function groupDataBySite(data) {
-
-    console.log("Grouping data by site:", data);
     const siteGroups = {};
     
     data.forEach(item => {
